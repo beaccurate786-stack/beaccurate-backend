@@ -1,0 +1,33 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a> &rsaquo;
+  <a href="../">{{ opts.verbose_name_plural|capfirst }}</a> &rsaquo; Import CSV
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  {% if errors %}
+    <ul class="errorlist">
+      {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+    <p>Nothing was imported. Fix the problems and upload again.</p>
+  {% endif %}
+
+  <p>Columns: <code>{{ columns|join:", " }}</code></p>
+  <p>Required: <code>{{ required|join:", " }}</code>. The ID is generated automatically.</p>
+  {% for name, values in choices.items %}
+    <p><strong>{{ name }}</strong>: {{ values }}</p>
+  {% endfor %}
+  <p><a href="{{ sample_url }}">Download a CSV with the header row</a></p>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <p><input type="file" name="csv_file" accept=".csv,text/csv" required></p>
+    <input type="submit" class="default" value="Import">
+  </form>
+</div>
+{% endblock %}

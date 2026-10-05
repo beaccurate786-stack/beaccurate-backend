@@ -20,7 +20,6 @@ class Migration(migrations.Migration):
                 ('email', models.EmailField(max_length=254, unique=True)),
                 ('phone_number', models.CharField(blank=True, max_length=20)),
                 ('department', models.CharField(max_length=100)),
-                ('designation', models.CharField(max_length=100)),
                 ('status', models.CharField(choices=[('active', 'Active'), ('inactive', 'Inactive')], default='active', max_length=10)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
