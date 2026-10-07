@@ -1,6 +1,6 @@
 from django.db import models, transaction
 
-from .enums import Department, Division, Semester, StudentStatus
+from .enums import Batch, Department, Division, Semester, StudentStatus
 
 
 class Student(models.Model):
@@ -15,6 +15,7 @@ class Student(models.Model):
     department = models.CharField(max_length=20, choices=Department.choices)
     semester = models.PositiveSmallIntegerField(choices=Semester.choices)
     division = models.CharField(max_length=1, choices=Division.choices)
+    batch = models.CharField(max_length=1, choices=Batch.choices, default='')
     profile_photo = models.ImageField(upload_to='student_profiles/', blank=True, null=True)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -23,7 +24,7 @@ class Student(models.Model):
     class Meta:
         ordering = ('student_id',)
         indexes = [
-            models.Index(fields=('department', 'semester', 'division')),
+            models.Index(fields=('department', 'semester', 'division', 'batch')),
             models.Index(fields=('status',)),
         ]
 
@@ -49,3 +50,5 @@ class Student(models.Model):
 
     def __str__(self):
         return f'{self.student_id} — {self.full_name}'
+
+

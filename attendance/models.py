@@ -1,4 +1,7 @@
+import datetime
+
 from django.db import models
+from django.utils import timezone
 
 
 class Attendance(models.Model):
@@ -27,6 +30,14 @@ class Attendance(models.Model):
             models.UniqueConstraint(fields=('student', 'date'), name='unique_student_attendance_per_day'),
         ]
         indexes = [models.Index(fields=('date', 'status'))]
+
+    def clean(self):
+        # Attendance may only be marked while the student's batch has a timetable slot running.
+        if self.status != self.Status.NOT_MARKED and self.student_id and self.date:
+            from timetable.services import ensure_attendance_open
+
+            when = timezone.make_aware(datetime.datetime.combine(self.date, self.time or timezone.localtime().time()))
+            ensure_attendance_open(self.student, when)
 
     def __str__(self):
         return f'{self.student} - {self.date} ({self.get_status_display()})'

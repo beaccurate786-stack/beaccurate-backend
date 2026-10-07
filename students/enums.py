@@ -20,6 +20,30 @@ class Division(models.TextChoices):
     B = 'B', 'B'
 
 
+class Batch(models.TextChoices):
+    A = 'A', 'A'
+    B = 'B', 'B'
+    C = 'C', 'C'
+    D = 'D', 'D'
+
+
 class StudentStatus(models.TextChoices):
     ACTIVE = 'active', 'Active'
     INACTIVE = 'inactive', 'Inactive'
+
+
+class Role(models.TextChoices):
+    SUPER_ADMIN = 'Super Admin', 'Super Admin'
+    HOD = 'HOD', 'HOD'
+    MENTOR = 'Mentor', 'Mentor'
+    STUDENT = 'Student', 'Student'
+
+
+class Weekday(models.IntegerChoices):
+    MONDAY = 0, 'Monday'
+    TUESDAY = 1, 'Tuesday'
+    WEDNESDAY = 2, 'Wednesday'
+    THURSDAY = 3, 'Thursday'
+    FRIDAY = 4, 'Friday'
+    SATURDAY = 5, 'Saturday'
+    SUNDAY = 6, 'Sunday'

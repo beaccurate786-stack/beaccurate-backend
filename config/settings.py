@@ -35,7 +35,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split('
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
+    'students.admin_site.RoleAdminConfig',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'students',
     'faculty',
+    'timetable',
     'face_data',
     
 ]

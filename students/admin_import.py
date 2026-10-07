@@ -2,7 +2,7 @@ import csv
 import io
 
 from django.contrib import admin, messages
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.shortcuts import redirect
@@ -38,9 +38,11 @@ class CsvImportAdminMixin:
         return response
 
     def import_csv_view(self, request):
+        if not self.has_add_permission(request):
+            raise PermissionDenied
         opts = self.model._meta
         errors = []
-        if request.method == 'POST' and self.has_add_permission(request):
+        if request.method == 'POST':
             upload = request.FILES.get('csv_file')
             if not upload:
                 errors.append('Choose a CSV file to upload.')

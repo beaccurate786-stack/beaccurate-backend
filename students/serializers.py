@@ -7,3 +7,4 @@ class StudentSerializer(serializers.ModelSerializer):
         model = Student
         fields = "__all__"
         read_only_fields = ("student_id",)
+        extra_kwargs = {"batch": {"required": True}}

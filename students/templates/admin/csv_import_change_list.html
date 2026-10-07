@@ -2,6 +2,6 @@
 {% load admin_urls %}
 
 {% block object-tools-items %}
-  <li><a href="import-csv/" class="addlink">Import CSV</a></li>
+  {% if has_add_permission %}<li><a href="import-csv/" class="addlink">Import CSV</a></li>{% endif %}
   {{ block.super }}
 {% endblock %}

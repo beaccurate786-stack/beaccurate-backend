@@ -1,6 +1,7 @@
+from django.conf import settings
 from django.db import models, transaction
 
-from students.enums import Department
+from students.enums import Department, Division, Role, Semester
 
 
 class Faculty(models.Model):
@@ -15,6 +16,17 @@ class Faculty(models.Model):
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=20, choices=Department.choices)
+    semester = models.PositiveSmallIntegerField(choices=Semester.choices, null=True)
+    division = models.CharField(max_length=1, choices=Division.choices, default='')
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='faculty_profile',
+        limit_choices_to={'groups__name': Role.MENTOR},
+        help_text='Login account (Mentor group). Lets this faculty sign in and see their students.',
+    )
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -22,6 +34,14 @@ class Faculty(models.Model):
     class Meta:
         ordering = ('faculty_id',)
         indexes = [models.Index(fields=('department', 'status'))]
+
+    def related_students(self):
+        """Students in this faculty's semester and division."""
+        from students.models import Student
+
+        if self.semester is None or not self.division:
+            return Student.objects.none()
+        return Student.objects.filter(semester=self.semester, division=self.division)
 
     def save(self, *args, **kwargs):
         if not self.faculty_id:
