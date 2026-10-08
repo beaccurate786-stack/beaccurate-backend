@@ -1,11 +1,16 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.contrib.auth.models import Group, User
+from django.db import transaction
+from django.template.response import TemplateResponse
+from django.urls import reverse
+from django.utils import timezone
 
 from .admin_import import CsvImportAdminMixin
 from .access import filter_students_for
+from .enums import Batch, Division, Semester
 from .models import Student
 
 
@@ -18,9 +23,82 @@ class StudentAdmin(CsvImportAdminMixin, admin.ModelAdmin):
     list_filter = ('status', 'department', 'semester', 'division', 'batch')
     search_fields = ('student_id', 'roll_number', 'full_name', 'email')
     readonly_fields = ('created_at', 'updated_at')
+    actions = ('delete_selected', 'promote_to_next_semester')
 
     def get_queryset(self, request):
         return filter_students_for(request.user, super().get_queryset(request))
+
+    @admin.action(description='Promote selected students to the next semester')
+    def promote_to_next_semester(self, request, queryset):
+        selected = list(queryset.order_by('semester', 'division', 'roll_number'))
+        if request.POST.get('confirm_promotion') == 'yes':
+            invalid_assignment = any(
+                request.POST.get(f'division_{student.pk}', '__keep__') not in ('__keep__', *Division.values)
+                or request.POST.get(f'batch_{student.pk}', '__keep__') not in ('__keep__', *Batch.values)
+                for student in selected
+                if student.semester < max(Semester.values)
+            )
+            if invalid_assignment:
+                messages.error(request, 'Choose a valid division and batch for each student before confirming.')
+                return None
+
+            promoted = 0
+            skipped = 0
+            with transaction.atomic():
+                locked_students = {
+                    student.pk: student
+                    for student in Student.objects.select_for_update().filter(
+                        pk__in=[student.pk for student in selected]
+                    )
+                }
+                for preview_student in selected:
+                    student = locked_students.get(preview_student.pk)
+                    expected_semester = request.POST.get(f'expected_semester_{preview_student.pk}')
+                    if (
+                        student is None
+                        or expected_semester != str(student.semester)
+                        or student.semester >= max(Semester.values)
+                    ):
+                        skipped += 1
+                        continue
+
+                    target_division = request.POST.get(f'division_{student.pk}', '__keep__')
+                    target_batch = request.POST.get(f'batch_{student.pk}', '__keep__')
+                    if target_division != '__keep__':
+                        student.division = target_division
+                    if target_batch != '__keep__':
+                        student.batch = target_batch
+                    student.semester += 1
+                    student.save(update_fields=('semester', 'division', 'batch', 'updated_at'))
+                    promoted += 1
+
+            if promoted:
+                messages.success(request, f'Promoted {promoted} student(s) and saved their semester, division, and batch assignments.')
+            if skipped:
+                messages.warning(
+                    request,
+                    f'Skipped {skipped} student(s): they are already in the final semester or changed since the review.',
+                )
+            return None
+
+        eligible = [
+            (student, student.semester + 1)
+            for student in selected
+            if student.semester < max(Semester.values)
+        ]
+        final_semester = [student for student in selected if student.semester >= max(Semester.values)]
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Review student promotion',
+            'opts': self.model._meta,
+            'eligible_students': eligible,
+            'final_semester_students': final_semester,
+            'division_choices': Division.choices,
+            'batch_choices': Batch.choices,
+            'action_index': request.POST.get('index', '0'),
+            'changelist_url': reverse('admin:students_student_changelist'),
+        }
+        return TemplateResponse(request, 'admin/students/student/promote_confirmation.html', context)
 
 
 

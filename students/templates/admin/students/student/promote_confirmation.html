@@ -1,0 +1,78 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+  <p>
+    Promotion is manual. Confirm only students who passed your institution's required criteria.
+    Students not selected here will remain in their current semester. For each student, keep the current batch and division or assign new ones below.
+  </p>
+
+  {% if eligible_students %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="promote_to_next_semester">
+      <input type="hidden" name="confirm_promotion" value="yes">
+      <input type="hidden" name="index" value="{{ action_index }}">
+      {% for student, next_semester in eligible_students %}
+        <input type="hidden" name="_selected_action" value="{{ student.pk }}">
+        <input type="hidden" name="expected_semester_{{ student.pk }}" value="{{ student.semester }}">
+      {% endfor %}
+      {% for student in final_semester_students %}
+        <input type="hidden" name="_selected_action" value="{{ student.pk }}">
+        <input type="hidden" name="expected_semester_{{ student.pk }}" value="{{ student.semester }}">
+      {% endfor %}
+
+      <div class="module">
+        <table>
+          <thead>
+            <tr><th>Student ID</th><th>Student</th><th>Current semester</th><th>New semester</th><th>Division</th><th>Batch</th></tr>
+          </thead>
+          <tbody>
+            {% for student, next_semester in eligible_students %}
+              <tr>
+                <td>{{ student.student_id }}</td>
+                <td>{{ student.full_name }}</td>
+                <td>{{ student.get_semester_display }}</td>
+                <td>{{ next_semester }}</td>
+                <td>
+                  <select name="division_{{ student.pk }}">
+                    <option value="__keep__">Keep current ({{ student.get_division_display }})</option>
+                    {% for value, label in division_choices %}
+                      <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select name="batch_{{ student.pk }}">
+                    <option value="__keep__">Keep current ({{ student.get_batch_display|default:'not set' }})</option>
+                    {% for value, label in batch_choices %}
+                      <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if final_semester_students %}
+        <h2>Not eligible for promotion</h2>
+        <p>These students are already in the final semester and will remain unchanged:</p>
+        <ul>
+          {% for student in final_semester_students %}
+            <li>{{ student.student_id }} — {{ student.full_name }} (Semester {{ student.get_semester_display }})</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      <div class="submit-row">
+        <input type="submit" value="Confirm promotion" class="default">
+        <a href="{{ changelist_url }}" class="button cancel-link">Cancel</a>
+      </div>
+    </form>
+  {% else %}
+    <p>The selected students are already in the final semester. No changes will be made.</p>
+    <a href="{{ changelist_url }}" class="button">Return to students</a>
+  {% endif %}
+{% endblock %}

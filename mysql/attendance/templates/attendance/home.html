@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance log</title>
+  <style>
+    :root { color-scheme: light; font-family: Arial, sans-serif; color: #172033; background: #f4f6fa; }
+    body { margin: 0; }
+    main { max-width: 1180px; margin: 40px auto; padding: 0 20px; }
+    h1 { margin-bottom: 6px; }
+    .subtle { color: #65718a; margin-top: 0; }
+    .panel { background: white; border: 1px solid #e1e6ef; border-radius: 10px; padding: 18px; margin: 22px 0; }
+    form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+    label { display: grid; gap: 6px; color: #4b5872; font-size: 13px; }
+    input, select, button { box-sizing: border-box; min-height: 38px; border: 1px solid #ccd4e1; border-radius: 6px; padding: 8px 10px; background: white; font: inherit; }
+    button { background: #2459c4; color: white; border-color: #2459c4; cursor: pointer; padding: 8px 16px; }
+    a { color: #2459c4; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #edf0f5; }
+    th { color: #65718a; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .status { display: inline-block; border-radius: 20px; padding: 4px 9px; background: #edf1f7; }
+    .present { background: #e5f7ed; color: #17643a; }
+    .late { background: #fff2d9; color: #855300; }
+    .absent { background: #fde9e9; color: #922d2d; }
+    .empty { text-align: center; color: #65718a; padding: 32px; }
+    .top-link { float: right; }
+    .message { padding: 12px 14px; border-radius: 6px; background: #e5f7ed; color: #17643a; margin: 12px 0; }
+    .message.error { background: #fde9e9; color: #922d2d; }
+    .status-form { display: flex; align-items: center; gap: 8px; }
+    .status-form select { min-width: 120px; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="top-link" href="{% url 'admin:index' %}">Django admin</a>
+    <h1>Attendance log</h1>
+    <p class="subtle">HODs, mentors, and superadmins can correct attendance status. Mentors see only their assigned students.</p>
+    {% for message in messages %}
+      <div class="message{% if message.tags == 'error' %} error{% endif %}">{{ message }}</div>
+    {% endfor %}
+
+    <section class="panel">
+      <form method="get">
+        <label>From date<input type="date" name="start_date" value="{{ start_date }}"></label>
+        <label>To date<input type="date" name="end_date" value="{{ end_date }}"></label>
+        <label>Student<input type="search" name="q" value="{{ search }}" placeholder="Name, ID, or roll number"></label>
+        <button type="submit">Filter</button>
+        <a href="{% url 'attendance:log' %}">Clear filters</a>
+      </form>
+    </section>
+
+    <section class="panel table-wrap">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Student ID</th><th>Student</th><th>Roll number</th><th>Manual status change</th></tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+            <tr>
+              <td>{{ record.date|date:"M j, Y" }}</td>
+              <td>{{ record.student.student_id }}</td>
+              <td>{{ record.student.full_name }}</td>
+              <td>{{ record.student.roll_number }}</td>
+              <td>
+                <form class="status-form" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="record_id" value="{{ record.pk }}">
+                  <select name="status" aria-label="Attendance status for {{ record.student.full_name }}">
+                    {% if record.status != 'present' and record.status != 'absent' %}
+                      <option value="" selected disabled>{{ record.get_status_display }} (current)</option>
+                    {% endif %}
+                    {% for value, label in editable_statuses %}
+                      <option value="{{ value }}" {% if record.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit">Save</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td class="empty" colspan="5">No attendance records match these filters yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
